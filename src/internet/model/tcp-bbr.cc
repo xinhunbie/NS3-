@@ -19,7 +19,7 @@
  *          Truc Anh N. Nguyen <annguyen@ittc.ku.edu>,
  *          Greeshma Umapathi
  *
- * James P.G. Sterbenz <jpgs@ittc.ku.edu>, director
+ * James. P.G. Sterbenz <jpgs@ittc.ku.edu>, director
  * ResiliNets Research Group  http://wiki.ittc.ku.edu/resilinets
  * Information and Telecommunication Technology Center (ITTC)
  * and Department of Electrical Engineering and Computer Science
