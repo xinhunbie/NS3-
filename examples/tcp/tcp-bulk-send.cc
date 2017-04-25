@@ -16,9 +16,8 @@
 
 // Network topology
 //
-//       n0 ----------- n1
-//            500 Kbps
-//             5 ms
+//       n0 ------router----- n1
+//           
 //
 // - Flow from n0 to n1 using BulkSendApplication.
 // - Tracing of queues and packet receptions to file "tcp-bulk-send.tr"
@@ -32,6 +31,7 @@
 #include "ns3/applications-module.h"
 #include "ns3/network-module.h"
 #include "ns3/packet-sink.h"
+#include "ns3/ipv4-global-routing-helper.h"
 
 using namespace ns3;
 
@@ -40,49 +40,53 @@ NS_LOG_COMPONENT_DEFINE ("TcpBulkSendExample");
 int
 main (int argc, char *argv[])
 {
-       Config::SetDefault("ns3::TcpL4Protocol::SocketType",StringValue("ns3::TcpBbr"));
-        // Config::SetDefault("ns3::TcpL4Protocol::SocketType",StringValue("ns3::TcpWestwood"));
+      Config::SetDefault("ns3::TcpL4Protocol::SocketType",StringValue("ns3::TcpBbr"));
+       //  Config::SetDefault("ns3::TcpL4Protocol::SocketType",StringValue("ns3::TcpWestwood"));
        //Config::SetDefault("ns3::TcpL4Protocol::TcpTxBuffer", UintegerValue(50*1024));
        // Config::Set("ns3::TcpBbr::SetSndBufSize", UintegerValue(50*1024));
-  bool tracing = false;
+ // bool tracing = false;
   uint32_t maxBytes = 5*1024*1024;
  // double errRate = 0.00002;
-  double errRate = 0;
+ // double errRate = 0;
 //
 // Allow the user to override any of the defaults at
 // run-time, via command-line arguments
 //
-  CommandLine cmd;
-  cmd.AddValue ("tracing", "Flag to enable/disable tracing", tracing);
-  cmd.AddValue ("maxBytes",
-                "Total number of bytes for application to send", maxBytes);
-  cmd.Parse (argc, argv);
 
 //
 // Explicitly create the nodes required by the topology (shown above).
 //
   NS_LOG_INFO ("Create nodes.");
-  NodeContainer nodes;
+  NodeContainer nodes, router;
   nodes.Create (2);
-
+  router.Create(1);
   NS_LOG_INFO ("Create channels.");
 
-//
+  NodeContainer n0n1 = NodeContainer(nodes.Get(0),router.Get(0));
+  NodeContainer n1n2 = NodeContainer(router.Get(0),nodes.Get(1));
+  //
 // Explicitly create the point-to-point link required by the topology (shown above).
 //
   PointToPointHelper pointToPoint;
   pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("50Mbps"));
-  pointToPoint.SetChannelAttribute ("Delay", StringValue ("10ms"));
+  pointToPoint.SetChannelAttribute ("Delay", StringValue ("50ms"));
   //pointToPoint.SetQueue("ns3::DropTailQueue","MaxPackets",UintegerValue(1024));
 
-  NetDeviceContainer devices;
-  devices = pointToPoint.Install (nodes);
 
+  NetDeviceContainer devices,devices2;
+  devices = pointToPoint.Install (n0n1);
+
+
+  pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("20Mbps"));
+  pointToPoint.SetChannelAttribute ("Delay", StringValue ("100ms"));
+
+  devices2 = pointToPoint.Install (n1n2);
 //
 // Install the internet stack on the nodes
 //
   InternetStackHelper internet;
   internet.Install (nodes);
+  internet.Install (router);
 
 //
 // We've got the "hardware" in place.  Now we need to add IP addresses.
@@ -90,10 +94,15 @@ main (int argc, char *argv[])
   NS_LOG_INFO ("Assign IP Addresses.");
   Ipv4AddressHelper ipv4;
   ipv4.SetBase ("10.1.1.0", "255.255.255.0");
-  Ipv4InterfaceContainer i = ipv4.Assign (devices);
+  Ipv4InterfaceContainer i0i1 = ipv4.Assign (devices);
+
+  ipv4.SetBase ("10.1.2.0", "255.255.255.0");
+  Ipv4InterfaceContainer i1i2 = ipv4.Assign (devices2);
+
+  Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
   NS_LOG_INFO ("Create Applications.");
-  DoubleValue rate (errRate);
+/*  DoubleValue rate (errRate);
   Ptr<RateErrorModel> em1 = 
     CreateObjectWithAttributes<RateErrorModel> ("RanVar", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=1.0]"), "ErrorRate", rate);
   Ptr<RateErrorModel> em2 = 
@@ -102,7 +111,8 @@ main (int argc, char *argv[])
   // This enables the specified errRate on both link endpoints.
   devices.Get (0)->SetAttribute ("ReceiveErrorModel", PointerValue (em1));
   devices.Get (1)->SetAttribute ("ReceiveErrorModel", PointerValue (em2));
-
+  devices2.Get (0)->SetAttribute ("ReceiveErrorModel", PointerValue (em1));
+  devices2.Get (1)->SetAttribute ("ReceiveErrorModel", PointerValue (em2));*/
 //
 // Create a BulkSendApplication and install it on node 0
 //
@@ -110,7 +120,7 @@ main (int argc, char *argv[])
 
 
   BulkSendHelper source ("ns3::TcpSocketFactory",
-                         InetSocketAddress (i.GetAddress (1), port));
+                         InetSocketAddress (i1i2.GetAddress (1), port));
   // Set the amount of data to send in bytes.  Zero is unlimited.
   source.SetAttribute ("MaxBytes", UintegerValue (maxBytes));
   ApplicationContainer sourceApps = source.Install (nodes.Get (0));

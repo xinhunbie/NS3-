@@ -152,7 +152,7 @@ TcpBbr::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t packetsAcked,
 
 // min rtt window
   m_ackedSegments += packetsAcked;
- // m_minRtt = Time::Max();
+  m_minRtt = Time::Max();
     if(m_rttWindow.size()>200) //We need to set window size to be 8 Rtts instead of 8 packets received
   
     m_rttWindow.erase(m_rttWindow.begin());//erase oldest
@@ -162,7 +162,7 @@ TcpBbr::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t packetsAcked,
   m_minRtt = std::min(m_minRtt,it->second);}
   m_rttWindow[m_rttCounter]= rtt;
 
-
+//std::cout<<"PktsAcked::m_minRtt="<<m_minRtt<<std::endl;
   
 //max bdw window
   EstimateBW (rtt, tcb);
@@ -262,7 +262,7 @@ TcpBbr::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
    std::cerr<<"IncreaseWindow: drain1: "<<m_maxBwd<<std::endl;
           std::cerr<<"IncreaseWindow: drain2: "<<m_currentBW<<std::endl;
           std::cerr<<"IncreaseWindow: drain3: "<<fabs(m_maxBwd-m_currentBW)<<std::endl;*/
-  if (true||m_slowStart)
+  if (false && m_slowStart)
     {
       std::cerr<<"IncreaseWindow: slowstart max bandwidth: "<<m_maxBwd<<std::endl;
       std::cerr<<"IncreaseWindow: slowstart current bandwidth: "<<m_currentBW<<std::endl;
@@ -280,7 +280,7 @@ TcpBbr::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
 
 
     //drain phase, bandwidth stays the same but Rtt increases
-    else if(fabs(m_maxBwd-m_currentBW)<0.1*m_maxBwd && m_currentRtt.GetSeconds()/m_minRtt.GetSeconds()>1.1)//if (tcb->m_lastAckedSeq >= m_begSndNxt)
+    else if(false&& fabs(m_maxBwd-m_currentBW)<0.1*m_maxBwd && m_currentRtt.GetSeconds()/m_minRtt.GetSeconds()>1.1)//if (tcb->m_lastAckedSeq >= m_begSndNxt)
     {
           std::cerr<<"IncreaseWindow: drain1: "<<m_maxBwd<<std::endl;
           std::cerr<<"IncreaseWindow: drain2: "<<m_currentBW<<std::endl;
@@ -293,7 +293,7 @@ TcpBbr::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
 
   }
   //probe phase
-   else { // A Bbr cycle has finished, we do Bbr cwnd adjustment every RTT.
+   else if(false){ // A Bbr cycle has finished, we do Bbr cwnd adjustment every RTT.
 
     tcb->m_cWnd = tcb->m_cWnd*m_probeFactor;
               std::cerr<<"IncreaseWindow: probe phase max bandwidth: "<<m_maxBwd<<std::endl;
@@ -405,6 +405,13 @@ TcpBbr::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
       // Reset cntRtt & minRtt every RTT
     //  m_cntRtt = 0;
     //  m_minRtt = Time::Max ();
+
+    }
+    //BDP
+    else{
+      //std::cout<< "tcb->m_cWnd= " <<std::max(5000.0,m_minRtt.GetSeconds()*20*1024*1024/16)<<std::endl;
+      //std::cout<<"m_minRtt= "<<m_minRtt.GetSeconds()<<std::endl;
+          tcb->m_cWnd = std::max(5000.0,m_minRtt.GetSeconds()*20*1024*1024/8);
 
     }
   /*else if (tcb->m_cWnd < tcb->m_ssThresh)

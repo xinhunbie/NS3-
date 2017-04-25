@@ -118,7 +118,8 @@ private:
   uint64_t        m_maxBytes;     //!< Limit total number of bytes sent
   uint64_t        m_totBytes;     //!< Total bytes sent so far
   TypeId          m_tid;          //!< The type of protocol to use.
-
+  int actual;
+  uint64_t toSend;
   /// Traced Callback: sent packets
   TracedCallback<Ptr<const Packet> > m_txTrace;
 
@@ -137,6 +138,7 @@ private:
    * \brief Send more data as soon as some has been transmitted.
    */
   void DataSend (Ptr<Socket>, uint32_t); // for socket's SetSendCallback
+  void Send();
 };
 
 } // namespace ns3

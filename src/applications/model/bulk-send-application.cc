@@ -30,6 +30,7 @@
 #include "ns3/trace-source-accessor.h"
 #include "ns3/tcp-socket-factory.h"
 #include "bulk-send-application.h"
+#include "ns3/pointer.h"
 
 namespace ns3 {
 
@@ -166,7 +167,16 @@ void BulkSendApplication::StopApplication (void) // Called at time specified by 
     }
 }
 
-
+  void BulkSendApplication::Send()
+  {
+Ptr<Packet> packet = Create<Packet> (toSend);
+      m_txTrace (packet);
+      actual = m_socket->Send (packet);
+   //   if (actual > 0)
+     //   {
+       //   m_totBytes += actual;
+        //}
+  }
 // Private helpers
 
 void BulkSendApplication::SendData (void)
@@ -179,17 +189,22 @@ void BulkSendApplication::SendData (void)
       // uint64_t to allow the comparison later.
       // the result is in a uint32_t range anyway, because
       // m_sendSize is uint32_t.
-      uint64_t toSend = m_sendSize;
+      //uint64_t toSend = m_sendSize;
+      toSend = m_sendSize;
       // Make sure we don't send too many
       if (m_maxBytes > 0)
         {
           toSend = std::min (toSend, m_maxBytes - m_totBytes);
         }
-
-      NS_LOG_LOGIC ("sending packet at " << Simulator::Now ());
-      Ptr<Packet> packet = Create<Packet> (toSend);
+ /*             Ptr<Packet> packet = Create<Packet> (toSend);
       m_txTrace (packet);
-      int actual = m_socket->Send (packet);
+      actual = m_socket->Send (packet);*/
+
+     // Time nextTime(Seconds (toSend*8 / static_cast<double>(10)));
+     // EventId m_sendEvent = Simulator::Schedule (Time (Seconds(0.0000000000001)),&BulkSendApplication::Send, this);
+      //NS_LOG_LOGIC ("sending packet at " << Simulator::Now ());
+        Send();
+
       if (actual > 0)
         {
           m_totBytes += actual;
