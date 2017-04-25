@@ -16,7 +16,7 @@
 
 // Network topology
 //
-//       n0 ------router----- n1
+//       n0 ------n1(router)----- n2
 //           
 //
 // - Flow from n0 to n1 using BulkSendApplication.
