@@ -86,8 +86,8 @@ TcpBbr::TcpBbr (void) :
   m_maxBwd(0),
   m_slowStart(true),
   m_slowStartPacketscount(3),
-  m_drainFactor(0.8),
-  m_probeFactor(1.2),
+  m_drainFactor(0.75),
+  m_probeFactor(1.25),
   m_currentRtt(Time(0))
 
 {
@@ -149,11 +149,11 @@ TcpBbr::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t packetsAcked,
     }
 
   std::cerr<<"PktsAcked: current Timestamp: "<<rtt.GetSeconds()<<std::endl;
-
+  std::cerr<<"PktsAcked: current Window size: "<<tcb->m_cWnd<<std::endl;
 // min rtt window
   m_ackedSegments += packetsAcked;
   m_minRtt = Time::Max();
-    if(m_rttWindow.size()>200) //We need to set window size to be 8 Rtts instead of 8 packets received
+    if(m_rttWindow.size()>180) //We need to set window size to be 8 Rtts instead of 8 packets received
   
     m_rttWindow.erase(m_rttWindow.begin());//erase oldest
     for(std::map<uint32_t,Time>::iterator it = m_rttWindow.begin();it!=m_rttWindow.end();++it )
@@ -167,7 +167,7 @@ TcpBbr::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t packetsAcked,
 //max bdw window
   EstimateBW (rtt, tcb);
   m_maxBwd = 0;
-  if(m_bdwWindow.size()>300) //We need to set window size to be 10 secs instead of 8 packets received
+  if(m_bdwWindow.size()>100) //We need to set window size to be 10 secs instead of 8 packets received
   
     m_bdwWindow.erase(m_bdwWindow.begin());//erase oldest
   for(std::map<uint32_t,double>::iterator it = m_bdwWindow.begin();it!=m_bdwWindow.end();++it )
@@ -262,7 +262,7 @@ TcpBbr::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
    std::cerr<<"IncreaseWindow: drain1: "<<m_maxBwd<<std::endl;
           std::cerr<<"IncreaseWindow: drain2: "<<m_currentBW<<std::endl;
           std::cerr<<"IncreaseWindow: drain3: "<<fabs(m_maxBwd-m_currentBW)<<std::endl;*/
-  if (false && m_slowStart)
+  if ( m_slowStart)
     {
       std::cerr<<"IncreaseWindow: slowstart max bandwidth: "<<m_maxBwd<<std::endl;
       std::cerr<<"IncreaseWindow: slowstart current bandwidth: "<<m_currentBW<<std::endl;
@@ -274,13 +274,15 @@ TcpBbr::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
         m_slowStartPacketscount--;
       if(m_slowStartPacketscount<1 && fabs(m_maxBwd-m_currentBW)<0.2*m_maxBwd)
         m_slowStart = false;
+      m_lastTimeStamp = Simulator::Now();
 
     }
 
 
 
     //drain phase, bandwidth stays the same but Rtt increases
-    else if(false&& fabs(m_maxBwd-m_currentBW)<0.1*m_maxBwd && m_currentRtt.GetSeconds()/m_minRtt.GetSeconds()>1.1)//if (tcb->m_lastAckedSeq >= m_begSndNxt)
+    //every 80ms will have drain or probe phase
+    else if( fabs(m_lastTimeStamp.GetSeconds()-Simulator::Now().GetSeconds())>0.08 && fabs(m_maxBwd-m_currentBW)<0.02*m_maxBwd && m_currentRtt.GetSeconds()/m_minRtt.GetSeconds()>1.2)//if (tcb->m_lastAckedSeq >= m_begSndNxt)
     {
           std::cerr<<"IncreaseWindow: drain1: "<<m_maxBwd<<std::endl;
           std::cerr<<"IncreaseWindow: drain2: "<<m_currentBW<<std::endl;
@@ -288,18 +290,22 @@ TcpBbr::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
 
 
    // m_cWnd = m_cWnd*m_drainFactor;
-      tcb->m_cWnd = tcb->m_cWnd*m_drainFactor;
+       tcb->m_cWnd = tcb->m_cWnd*m_drainFactor;
             std::cerr<<"IncreaseWindow: drain phase window "<<tcb->m_cWnd<<std::endl;
+            m_lastTimeStamp = Simulator::Now();
+
 
   }
   //probe phase
-   else if(false){ // A Bbr cycle has finished, we do Bbr cwnd adjustment every RTT.
+  //either probe or drain within 80ms
+   else if(fabs(m_lastTimeStamp.GetSeconds()-Simulator::Now().GetSeconds())>0.08){ // A Bbr cycle has finished, we do Bbr cwnd adjustment every RTT.
 
     tcb->m_cWnd = tcb->m_cWnd*m_probeFactor;
               std::cerr<<"IncreaseWindow: probe phase max bandwidth: "<<m_maxBwd<<std::endl;
             std::cerr<<"IncreaseWindow: probe phase current bandwidth: "<<m_currentBW<<std::endl;
 
                 std::cerr<<"IncreaseWindow: probe phase window"<<tcb->m_cWnd <<std::endl;
+    m_lastTimeStamp = Simulator::Now();
 
       // NS_LOG_LOGIC ("A Bbr cycle has finished, we adjust cwnd once per RTT.");
 
@@ -411,7 +417,7 @@ TcpBbr::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
     else{
       //std::cout<< "tcb->m_cWnd= " <<std::max(5000.0,m_minRtt.GetSeconds()*20*1024*1024/16)<<std::endl;
       //std::cout<<"m_minRtt= "<<m_minRtt.GetSeconds()<<std::endl;
-          tcb->m_cWnd = std::max(5000.0,m_minRtt.GetSeconds()*20*1024*1024/8);
+         // tcb->m_cWnd = std::max(5000.0,m_minRtt.GetSeconds()*20*1024*1024/2/10);
 
     }
   /*else if (tcb->m_cWnd < tcb->m_ssThresh)
@@ -462,7 +468,7 @@ TcpBbr::EstimateBW (const Time &rtt, Ptr<TcpSocketState> tcb)
 
   // Filter the BW sample
 
-  double alpha = 0.9;
+  double alpha = 0.5;
 
   m_currentBW = alpha*m_lastBW+(1-alpha)*m_currentBW;
   m_lastBW = m_currentBW;

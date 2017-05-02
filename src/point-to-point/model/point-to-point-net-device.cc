@@ -255,7 +255,7 @@ PointToPointNetDevice::TransmitStart (Ptr<Packet> p)
 {
   NS_LOG_FUNCTION (this << p);
   NS_LOG_LOGIC ("UID is " << p->GetUid () << ")");
-
+   
   //
   // This function is called to start the process of transmitting a packet.
   // We need to tell the channel that we've started wiggling the wire and
@@ -383,7 +383,11 @@ PointToPointNetDevice::SetReceiveErrorModel (Ptr<ErrorModel> em)
 void
 PointToPointNetDevice::Receive (Ptr<Packet> packet)
 {
+
+
   NS_LOG_FUNCTION (this << packet);
+
+
   uint16_t protocol = 0;
 
   if (m_receiveErrorModel && m_receiveErrorModel->IsCorrupt (packet) ) 

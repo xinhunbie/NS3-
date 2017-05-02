@@ -159,6 +159,7 @@ protected:
   double m_drainFactor;
   double m_probeFactor;
   Time m_currentRtt;
+  Time m_lastTimeStamp;
 };
 
 } // namespace ns3

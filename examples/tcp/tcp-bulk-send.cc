@@ -36,16 +36,22 @@
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("TcpBulkSendExample");
-
 int
 main (int argc, char *argv[])
 {
+
+
+ 
+
+
+
       Config::SetDefault("ns3::TcpL4Protocol::SocketType",StringValue("ns3::TcpBbr"));
        //  Config::SetDefault("ns3::TcpL4Protocol::SocketType",StringValue("ns3::TcpWestwood"));
        //Config::SetDefault("ns3::TcpL4Protocol::TcpTxBuffer", UintegerValue(50*1024));
        // Config::Set("ns3::TcpBbr::SetSndBufSize", UintegerValue(50*1024));
  // bool tracing = false;
-  uint32_t maxBytes = 5*1024*1024;
+       uint32_t maxBytes = 5*1024*1024;
+     // uint32_t maxBytes = 1024;
  // double errRate = 0.00002;
  // double errRate = 0;
 //
@@ -68,9 +74,10 @@ main (int argc, char *argv[])
 // Explicitly create the point-to-point link required by the topology (shown above).
 //
   PointToPointHelper pointToPoint;
-  pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("50Mbps"));
-  pointToPoint.SetChannelAttribute ("Delay", StringValue ("50ms"));
-  //pointToPoint.SetQueue("ns3::DropTailQueue","MaxPackets",UintegerValue(1024));
+  pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("100Mbps"));
+  pointToPoint.SetChannelAttribute ("Delay", StringValue ("5ms"));
+  //pointToPoint.SetQueue("ns3::DropTailQueue");
+  pointToPoint.SetQueue("ns3::DropTailQueue","MaxPackets",UintegerValue(50));
 
 
   NetDeviceContainer devices,devices2;
@@ -78,7 +85,10 @@ main (int argc, char *argv[])
 
 
   pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("20Mbps"));
-  pointToPoint.SetChannelAttribute ("Delay", StringValue ("100ms"));
+  pointToPoint.SetChannelAttribute ("Delay", StringValue ("30ms"));
+  pointToPoint.SetQueue("ns3::DropTailQueue","MaxPackets",UintegerValue(50));
+
+ // pointToPoint.SetQueue("ns3::DropTailQueue");
 
   devices2 = pointToPoint.Install (n1n2);
 //
@@ -139,12 +149,11 @@ main (int argc, char *argv[])
 //
 // Set up tracing if enabled
 //
-  if (true)
-    {
+  
       AsciiTraceHelper ascii;
       pointToPoint.EnableAsciiAll (ascii.CreateFileStream ("tcp-bulk-send.tr"));
       pointToPoint.EnablePcapAll ("tcp-bulk-send", true);
-    }
+   
 
 //
 // Now, do the actual simulation.
